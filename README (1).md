@@ -68,6 +68,27 @@ All preprocessing was implemented using **`Pipeline`** and **`ColumnTransformer`
 
 ---
 
+## 📊 Model Performance Comparison
+
+Multiple regression models were trained and evaluated using a consistent preprocessing pipeline.  
+Model selection was based on **5-fold cross-validated R²**, prioritizing generalization and stability over single train–test results.
+
+| Model | Cross-Validated R² | Notes |
+|------|-------------------|------|
+| Decision Tree | ~0.40 | Baseline model, prone to overfitting |
+| SVR (RBF Kernel) | ~0.44 | Captures non-linearity but sensitive to scaling |
+| Gradient Boosting | ~0.34 | Underfit on this dataset |
+| HistGradientBoosting | ~0.49 | Faster boosting, moderate performance |
+| XGBoost | ~0.40 | Under-tuned, requires further optimization |
+| Extra Trees | ~0.61 | Strong performance, slightly higher variance |
+| **Random Forest (Final Model)** | **~0.66** | **Best generalization with low variance** |
+
+**Final model selection** was based on:
+- Highest cross-validated R²
+- Low variance across folds
+- Robust performance on noisy, real-world data
+
+---
 ## 🏆 Final Model
 ### ✅ Random Forest Regressor
 
