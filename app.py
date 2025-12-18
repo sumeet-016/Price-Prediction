@@ -4,6 +4,14 @@ import numpy as np
 import joblib
 from sklearn.base import BaseEstimator, TransformerMixin
 
+# =====================================================
+# PAGE CONFIG (FIRST STREAMLIT COMMAND)
+# =====================================================
+st.set_page_config(page_title="Car Price Predictor", layout="wide")
+
+# =====================================================
+# CUSTOM TRANSFORMER (REQUIRED FOR LOADING MODEL)
+# =====================================================
 class FrequencyEncoder(BaseEstimator, TransformerMixin):
     def __init__(self):
         self.freq_maps = {}
@@ -11,7 +19,7 @@ class FrequencyEncoder(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         X = pd.DataFrame(X)
         for col in X.columns:
-            self.freq_maps[col] = X[col].value_counts(normalize=True)
+            self.freq_maps[col] = X[col].value_counts(normalize=True).to_dict()
         return self
 
     def transform(self, X):
@@ -20,67 +28,122 @@ class FrequencyEncoder(BaseEstimator, TransformerMixin):
             X[col] = X[col].map(self.freq_maps.get(col, {})).fillna(0)
         return X.values
 
+# =====================================================
+# LOAD MODEL + DATA
+# =====================================================
 @st.cache_resource
 def load_assets():
     model = joblib.load("random_forest_car_price_model.pkl")
+    df = pd.read_csv("car_price_prediction_updated.csv")
 
-    df = pd.read_csv('car_price_prediction_updated.csv')
+    # clean strings
+    for col in [
+        'Manufacturer','Model','Category','Leather interior','Fuel type',
+        'Gear box type','Drive wheels','Wheel','Color'
+    ]:
+        df[col] = df[col].astype(str).str.strip()
+
+    df['Manufacturer'] = df['Manufacturer'].str.title()
     return model, df
 
-# Page Config
-st.set_page_config(page_title="Car Price Predictor", layout="wide")
+pipeline, data = load_assets()
 
-try:
-    pipeline, data = load_assets()
-except Exception as e:
-    st.error(f"Error loading assets: {e}")
-    st.info("Ensure 'random_forest_car_price_model.pkl' and the CSV are in the same folder.")
-    st.stop()
+# =====================================================
+# SIDEBAR
+# =====================================================
+with st.sidebar:
+    st.title("🚗 Car Price Predictor")
+    st.markdown("Predict **used car market price** using ML.")
+    st.markdown("---")
+    st.markdown("**Model:** Random Forest + Pipeline")
+    st.markdown("**Encoding:** Frequency Encoding")
+    st.markdown("---")
+    st.markdown("👨‍💻 **Sumeet Kumar Pal**")
+    st.markdown("[GitHub](https://github.com/sumeet-016)")
+    st.markdown("[LinkedIn](https://www.linkedin.com/in/palsumeet/)")
 
-st.title("🚗 Complete Car Price Prediction System")
-st.markdown("Please fill in all details accurately for a precise estimation.")
+# =====================================================
+# MAIN UI
+# =====================================================
+st.title("🚘 Used Car Price Prediction")
 
-with st.form("car_form"):
-    row1_col1, row1_col2, row1_col3 = st.columns(3)
-    
-    with row1_col1:
+with st.form("prediction_form"):
+
+    col1, col2, col3 = st.columns(3)
+
+    # ---------------- MANUFACTURER ----------------
+    with col1:
         manufacturers = sorted(data['Manufacturer'].unique())
-        selected_mfr = st.selectbox("Manufacturer", manufacturers)
-        
+        selected_mfr = st.selectbox(
+            "Manufacturer",
+            manufacturers,
+            key="manufacturer"
+        )
 
-        mfr_mask = data['Manufacturer'] == selected_mfr
-        filtered_models = sorted(data[mfr_mask]['Model'].unique())
-        selected_model = st.selectbox("Model", filtered_models)
+    # ---------------- MODEL (FIXED) ----------------
+    with col2:
+        filtered_models = sorted(
+            data[data['Manufacturer'] == selected_mfr]['Model'].unique()
+        )
 
-    with row1_col2:
-        category = st.selectbox("Category", sorted(data['Category'].unique()))
-        leather = st.selectbox("Leather Interior", ["Yes", "No"])
-        fuel = st.selectbox("Fuel Type", sorted(data['Fuel type'].unique()))
+        # 🔥 FORCE RESET WHEN MANUFACTURER CHANGES
+        if "prev_mfr" not in st.session_state:
+            st.session_state.prev_mfr = selected_mfr
 
-    with row1_col3:
-        gear = st.selectbox("Gear Box Type", sorted(data['Gear box type'].unique()))
-        drive = st.selectbox("Drive Wheels", sorted(data['Drive wheels'].unique()))
-        wheel = st.selectbox("Wheel (Steering)", sorted(data['Wheel'].unique()))
+        if st.session_state.prev_mfr != selected_mfr:
+            st.session_state.model = filtered_models[0]
+            st.session_state.prev_mfr = selected_mfr
+
+        selected_model = st.selectbox(
+            "Model",
+            filtered_models,
+            key="model"
+        )
+
+    # ---------------- CATEGORY ----------------
+    with col3:
+        category = st.selectbox(
+            "Category",
+            sorted(data['Category'].unique())
+        )
 
     st.divider()
-    
-    row2_col1, row2_col2, row2_col3 = st.columns(3)
-    
-    with row2_col1:
-        levy = st.number_input("Levy (Tax)", value=float(data['Levy'].median()))
-        mileage = st.number_input("Mileage (km)", min_value=0, value=0)
-        
-    with row2_col2:
-        cylinders = st.number_input("Cylinders", min_value=1.0, max_value=16.0, value=4.0)
-        airbags = st.slider("Airbags Count", 0, 16, 4)
 
-    with row2_col3:
+    col4, col5, col6 = st.columns(3)
+
+    with col4:
+        fuel = st.selectbox("Fuel type", sorted(data['Fuel type'].unique()))
+        gear = st.selectbox("Gear box type", sorted(data['Gear box type'].unique()))
+
+    with col5:
+        drive = st.selectbox("Drive wheels", sorted(data['Drive wheels'].unique()))
+        wheel = st.selectbox("Wheel", sorted(data['Wheel'].unique()))
+
+    with col6:
+        leather = st.selectbox("Leather interior", ["Yes", "No"])
         color = st.selectbox("Color", sorted(data['Color'].unique()))
-        age = st.number_input("Car Age (Years)", min_value=0, max_value=100, value=5)
 
-    predict_btn = st.form_submit_button("Predict Estimated Price", type="primary")
+    st.divider()
 
-if predict_btn:
+    col7, col8, col9 = st.columns(3)
+
+    with col7:
+        levy = st.number_input("Levy", value=float(data['Levy'].median()))
+        mileage = st.number_input("Mileage", value=int(data['Mileage'].median()))
+
+    with col8:
+        cylinders = st.number_input("Cylinders", value=float(data['Cylinders'].median()))
+        airbags = st.slider("Airbags", 0, 16, int(data['Airbags'].median()))
+
+    with col9:
+        age = st.number_input("Age (years)", 0, 100, int(data['Age'].median()))
+
+    submit = st.form_submit_button("🔮 Predict Price")
+
+# =====================================================
+# PREDICTION
+# =====================================================
+if submit:
     input_df = pd.DataFrame([{
         'Levy': levy,
         'Manufacturer': selected_mfr,
@@ -99,10 +162,9 @@ if predict_btn:
     }])
 
     try:
-        log_pred = pipeline.predict(input_df)
-        final_price = np.expm1(log_pred)[0]
-        
-        st.balloons()
-        st.success(f"### Estimated Market Price: **${final_price:,.2f}**")
+        log_price = pipeline.predict(input_df)
+        final_price = np.expm1(log_price)[0]
+        st.success(f"### 💰 Estimated Price: ${final_price:,.2f}")
     except Exception as e:
-        st.error(f"Prediction Error: {e}")
+        st.error("Prediction failed")
+        st.exception(e)
