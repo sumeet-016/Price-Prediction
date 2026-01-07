@@ -26,7 +26,7 @@ The model processes 17 distinct features through a modular **`ColumnTransformer`
 
 - **Numerical:** Age, Mileage, Engine Volume, Levy, Cylinders, Airbags, **Mileage_Intensity**.
 - **Categorical:** Manufacturer, Model, Category, Fuel type, Gearbox, Drive wheels, Color.
-- **Binary/Ordinal:** Leather interior, **Turbo Engine**, Wheel.
+- **Binary/Ordinal:** Leather interior, **Turbo Engine**.
 
 
 
