@@ -19,8 +19,8 @@ class DataIngestion:
     def initiate_data_ingestion(self):
         logging.info("Data Ingestion started")
         try:
-            # Update this path to where your CSV is located
-            df = pd.read_csv('NoteBook/Data/Telco-Customer-Churn.csv') 
+            # Reading the data from the local storage 
+            df = pd.read_csv(r'D:\Data Science Projects\Car Price Prediction\Dataset\car_price_prediction_updated.csv') 
             
             os.makedirs(os.path.dirname(self.ingestion_config.train_data_path), exist_ok=True)
             df.to_csv(self.ingestion_config.raw_data_path, index=False, header=True)
