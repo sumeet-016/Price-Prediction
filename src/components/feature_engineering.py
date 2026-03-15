@@ -96,9 +96,9 @@ class FeatureEngine(BaseEstimator, TransformerMixin):
             )
             data['Mileage_Intensity'] = (data['Mileage'] / (data['Age'] + 1)).round(2)
 
-            
 
             logging.nfo("Feature Engineering Completed")
+
             return data
         except Exception as e:
             raise CustomException(e, sys)
