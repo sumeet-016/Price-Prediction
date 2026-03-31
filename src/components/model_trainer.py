@@ -1,9 +1,10 @@
 import os
 import sys
 from dataclasses import dataclass
-from sklearn.ensemble import VotingClassifier, GradientBoostingClassifier
-from sklearn.linear_model import LogisticRegression
-from catboost import CatBoostClassifier
+from sklearn.ensemble import StackingRegressor, ExtraTreesRegressor
+from sklearn.linear_model import Ridge
+from catboost import CatBoostRegressor
+from lightgbm import LGBMRegressor
 from src.exception import CustomException
 from src.logger import logging
 from src.utils import save_object
@@ -27,13 +28,33 @@ class ModelTrainer:
 
             y_train = y_train.astype(int)
 
-            lr = LogisticRegression(solver='liblinear', C=10, max_iter=1000)
-            gb = GradientBoostingClassifier(n_estimators=100, max_depth=4, learning_rate=0.05, random_state=42)
-            cb = CatBoostClassifier(iterations=200, depth=6, learning_rate=0.01, verbose=0, random_state=42)
+            et = ExtraTreesRegressor(
+                max_depth=30, max_features=1,
+                min_samples_leaf=1, min_samples_split=3,
+                n_estimators=229, random_state=42
+            )
 
-            ensemble = VotingClassifier(
-                estimators=[('lr', lr), ('gb', gb), ('cb', cb)],
-                voting='soft'
+            lgb = LGBMRegressor(
+                learning_rate=0.1, max_depth=30,
+                n_estimators=363, num_leaves=66,
+                random_state=42
+            )
+
+            cb = CatBoostRegressor(
+                depth=8, iterations=1114,
+                l2_leaf_reg=3, learning_rate=0.5,
+                random_state=42
+            )
+
+            ensemble = StackingRegressor(
+                estimators=[
+                    ('et', et),
+                    ('lgb', lgb),
+                    ('cb', cb)
+                ],
+                final_estimator=Ridge(),
+                cv=3,
+                n_jobs=-1
             )
 
             logging.info("Training ensemble model")

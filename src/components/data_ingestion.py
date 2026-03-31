@@ -20,7 +20,18 @@ class DataIngestion:
         logging.info("Data Ingestion started")
         try:
             # Reading the data from the local storage 
-            df = pd.read_csv(r'D:\Data Science Projects\Car Price Prediction\Dataset\car_price_prediction_updated.csv') 
+            df = pd.read_csv(r'D:\Data Science Projects\Car Price Prediction\Dataset\Dataset.csv') 
+            
+            # Remove cars < $500 (Likely 'junk' or errors)
+            # Remove cars > $300,000 (Supercars are not fit general pricing models)
+            df = df[(df['Price'] > 500) & (df['Price'] < 300000)]
+
+
+            # Exclude vintage vehicles (Age > 30) to ensure a homogeneous resale market.
+            df = df[df['Age'] <= 30]
+
+            # Remove cars with > 600,000 km
+            df = df[df['Mileage'] < 600000]
             
             os.makedirs(os.path.dirname(self.ingestion_config.train_data_path), exist_ok=True)
             df.to_csv(self.ingestion_config.raw_data_path, index=False, header=True)
