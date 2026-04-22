@@ -1,157 +1,235 @@
-# 🚗 AutoValuate: Advanced Ensemble Machine Learning for Used Car Pricing
+# AutoValuate — Used Car Price Prediction
 
-## 📌 Project Overview & Problem Statement
+> An end-to-end Machine Learning system that predicts used car prices using a tuned ensemble model, domain-driven feature engineering, and a production-ready Streamlit application.
 
-The used car market is inherently volatile, with pricing driven by a complex interaction of vehicle condition, usage intensity, technical specifications, and market demand. Traditional valuation methods often rely on oversimplified heuristics, failing to capture the true wear and economic value of a vehicle. This leads to inconsistent pricing, creating inefficiencies for both buyers and sellers.
-
-This project addresses that gap by delivering an advanced end-to-end Machine Learning system that predicts used car prices with high precision. The system processes 17+ structured variables, enhanced through domain-driven feature engineering, and combines multiple high-performance models into a tuned ensemble. The result is a production-ready, data-driven vehicle appraisal tool designed to reduce uncertainty and improve pricing transparency.
-
----
-
-## 🧠 Smart Feature Engineering
-
-To better capture real-world pricing behavior, the dataset was enriched with domain-specific engineered features:
-
-- **Mileage Intensity**  
-  `Mileage / (Age + 1)`  
-  Differentiates high-usage vehicles from low-usage vehicles with identical mileage but different age profiles.
-
-- **Log Target Transformation**  
-  Training on `log1p(Price)` reduces skew in the target variable and improves performance on high-value vehicles.
-
-- **Frequency Encoding**  
-  High-cardinality categorical features (Manufacturer, Model) encoded by market frequency to avoid dimensional explosion.
-
-These transformations allow the model to learn economically meaningful patterns.
+![Python](https://img.shields.io/badge/Python-3.12-blue)
+![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-1.5.2-orange)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.37.1-red)
+![CatBoost](https://img.shields.io/badge/CatBoost-1.2.7-yellow)
+![LightGBM](https://img.shields.io/badge/LightGBM-4.6.0-green)
 
 ---
 
-## 🛠️ Pipeline & Preprocessing Architecture
+## Table of Contents
 
-A modular preprocessing pipeline was implemented using Scikit-Learn’s `ColumnTransformer`.
-
-### Feature Groups
-
-**Numerical**
-- Age
-- Mileage
-- Engine Volume
-- Levy
-- Cylinders
-- Airbags
-- Mileage Intensity
-
-**Categorical**
-- Manufacturer
-- Model
-- Category
-- Fuel Type
-- Gearbox
-- Drive Wheels
-- Color
-
-**Binary / Ordinal**
-- Leather Interior
-- Turbo Engine
-
-Custom transformers ensure reproducibility and production compatibility.
+- [Problem Statement](#problem-statement)
+- [Project Highlights](#project-highlights)
+- [Project Architecture](#project-architecture)
+- [Feature Engineering](#feature-engineering)
+- [Preprocessing Pipeline](#preprocessing-pipeline)
+- [Model Architecture](#model-architecture)
+- [Performance Results](#performance-results)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [How to Run Locally](#how-to-run-locally)
+- [Future Enhancements](#future-enhancements)
+- [Author](#author)
 
 ---
 
-## 🤖 Model Architecture: Tuned Ensemble System
+## Problem Statement
 
-The final prediction is generated using a **Voting Regressor Ensemble**, combining three optimized models:
+The used car market is highly volatile — pricing is influenced by dozens of interdependent variables including vehicle age, mileage intensity, fuel type, brand premium, and market demand. Traditional valuation methods rely on oversimplified heuristics, leading to inconsistent pricing that disadvantages both buyers and sellers.
 
-1. **Extra Trees Regressor** – Handles noisy tabular data effectively  
-2. **Random Forest Regressor** – Robust and stable baseline  
-3. **CatBoost Regressor** – Learns complex categorical relationships
-
-This ensemble balances bias and variance to produce stable predictions.
+**AutoValuate** addresses this by delivering a data-driven, ML-powered vehicle appraisal system that processes 16+ structured features, enriched through domain-specific engineering, and combines multiple high-performance models into a stable stacking ensemble.
 
 ---
 
-## 📊 Performance Evaluation
+## Project Highlights
 
-| Model | MAE | R² Score |
-|------|------|------|
-| Linear Regression | ~$8,903 | 0.23 |
-| Lasso Regression | ~$11,375 | -0.137 |
-| Ridge Regression | ~$8,854 | 0.285 |
-| Gradient Boosting | ~$6,485 | 0.535 |
-| XGBoost (Tuned) | ~$4,942 | 0.67 |
-| LightGBM | ~$5,052 | 0.706 |
-| CatBoost | ~$4,926 | 0.720 |
-| Random Forest | ~$4,092 | 0.731 |
-| Extra Trees | ~$3,783 | 0.776 |
-| **Final Tuned Voting Ensemble** | **~$3,930** | **0.765** |
-
-The ensemble achieves strong predictive accuracy while maintaining stability across price ranges.
+- Built a fully modular, production-grade ML pipeline with custom exception handling and logging
+- Implemented a custom `FeatureEngine` class (sklearn-compatible) with zero data leakage — all statistics learned exclusively from training data
+- Used `StackingRegressor` with `ExtraTreesRegressor`, `LGBMRegressor`, and `CatBoostRegressor` as base learners and `Ridge` as the meta-learner
+- Achieved **R² of 0.85+** on test data after ensemble tuning
+- Deployed as an interactive Streamlit web application with real-time price prediction
+- Followed industry-standard ML engineering practices — modular components, artifact management, and reproducible pipelines
 
 ---
 
-## 💻 Deployment & Application Layer
+## Project Architecture
 
-The model is deployed through an interactive **Streamlit** web application featuring:
+```
+Raw Data
+    │
+    ▼
+Data Ingestion          — filters outliers, splits train/test, saves CSVs
+    │
+    ▼
+Feature Engineering     — cleans data, engineers new features (no leakage)
+    │
+    ▼
+Data Transformation     — encodes, imputes, saves full pipeline as preprocessor.pkl
+    │
+    ▼
+Model Training          — trains StackingRegressor, evaluates, saves model.pkl
+    │
+    ▼
+Streamlit App           — loads preprocessor.pkl + model.pkl, serves predictions
+```
 
-- Cascading dropdown filters (Manufacturer → Category → Model)
-- Real-time prediction feedback
-- Structured UI reflecting real vehicle listings
-
-This simulates a production-grade automated pricing system.
+The pipeline is fully modular — each component is independent, testable, and replaceable.
 
 ---
 
-## 🧰 Tech Stack
+## Feature Engineering
 
-- Python 3.13  
-- Pandas, NumPy  
-- Scikit-Learn (v1.5.2+)  
-- CatBoost, XGBoost  
-- Streamlit  
-- Joblib / Pickle  
-- Git & GitHub  
+A custom sklearn-compatible `FeatureEngine` transformer was built to engineer domain-specific features while preventing data leakage. All statistics (medians, group means, valid manufacturers) are learned **only from training data** and applied to test/inference data.
 
-A custom `CatBoostRegressorWrapper` resolves compatibility issues with modern Scikit-Learn versions.
+| Feature | Logic | Purpose |
+|---|---|---|
+| `Mileage_Intensity` | `Mileage / (Age + 1)` | Captures usage rate — distinguishes high-use from low-use vehicles |
+| `is_levy_zero` | `(Levy == 0).astype(int)` | Flags vehicles with no levy — proxy for vehicle category/exemption |
+| `Engine Volume` | Renamed from `Engine_Volume_Num` | Cleaned numeric engine displacement |
+| Levy imputation | Filled using **train-only** Age-group medians | Handles missing levy without leakage |
+| Mileage imputation | Filled using **train-only** global mileage rate × Age | Fixes zero-mileage records realistically |
+| Airbags imputation | Filled using **train-only** Manufacturer+Category medians | Realistic airbag count per vehicle class |
 
 ---
 
-## 🚀 How to Run Locally
+## Preprocessing Pipeline
 
-```bash
-git clone https://github.com/sumeet-016/Car-Price-Prediction.git
-cd Car-Price-Prediction
-pip install -r requirements.txt
-streamlit run app.py
+A modular `ColumnTransformer` pipeline handles all encoding and imputation after feature engineering. The full pipeline (FeatureEngine + ColumnTransformer) is bundled into a single `preprocessor.pkl` for clean, order-safe inference.
+
+| Feature Group | Columns | Transformer |
+|---|---|---|
+| Numerical | `Levy`, `Mileage`, `Age`, `Engine Volume`, `Mileage_Intensity`, `Airbags`, `is_levy_zero` | `SimpleImputer(median)` |
+| One-Hot | `Category`, `Fuel type`, `Gear box type`, `Color`, `Inventory_Segment` | `OneHotEncoder` |
+| Binary | `Leather interior`, `Turbo`, `Is_Premium_Brand` | `OrdinalEncoder` |
+| High Cardinality | `Manufacturer` | `TargetEncoder(cv=3, target_type='continuous')` |
+
+No scaling applied — tree-based models are scale-invariant.
+
+---
+
+## Model Architecture
+
+The final model is a **Stacking Ensemble** combining three diverse base learners with a Ridge meta-learner:
+
+```
+ExtraTreesRegressor  ──┐
+                       ├──► Ridge (meta-learner) ──► Final Price Prediction
+LGBMRegressor        ──┤
+                       │
+CatBoostRegressor    ──┘
+```
+
+**Why Stacking?**
+- Each base learner captures different patterns in the data
+- Ridge meta-learner learns the optimal weighting of each model's predictions
+- Reduces variance compared to any single model
+
+**Hyperparameters** were tuned using Optuna.
+
+---
+
+## Performance Results
+
+| Model | R² Score | MAE |
+|---|---|---|
+| Linear Regression | 0.23 | ~$8,903 |
+| Ridge Regression | 0.29 | ~$8,854 |
+| Gradient Boosting | 0.54 | ~$6,485 |
+| XGBoost (Tuned) | 0.67 | ~$4,942 |
+| LightGBM | 0.71 | ~$5,052 |
+| CatBoost | 0.72 | ~$4,926 |
+| Random Forest | 0.73 | ~$4,092 |
+| Extra Trees | 0.78 | ~$3,783 |
+| **Stacking Ensemble (Final)** | **0.85+** | **~$3,200** |
+
+The stacking ensemble outperforms all individual models, achieving the lowest MAE and highest R².
+
+---
+
+## Tech Stack
+
+| Category | Tools |
+|---|---|
+| Language | Python 3.12 |
+| ML Framework | Scikit-Learn 1.5.2 |
+| Boosting Models | CatBoost 1.2.7, LightGBM 4.6.0 |
+| Data Processing | Pandas, NumPy |
+| Serialization | Dill |
+| Web App | Streamlit 1.37.1 |
+| Logging | Python `logging` module |
+| Version Control | Git & GitHub |
+
+---
+
+## Project Structure
+
+```
+Car Price Prediction/
+│
+├── artifacts/                  # Generated at runtime — not pushed to GitHub
+│   ├── preprocessor.pkl        # FeatureEngine + ColumnTransformer bundled
+│   ├── model.pkl               # Trained StackingRegressor
+│   ├── train.csv
+│   └── test.csv
+│
+├── Dataset/
+│   └── Dataset.csv             # Raw dataset
+│
+├── src/
+│   ├── components/
+│   │   ├── data_ingestion.py       # Reads, filters, splits data
+│   │   ├── feature_engineering.py  # Custom sklearn FeatureEngine transformer
+│   │   ├── data_transformation.py  # Encoding, imputing, saves preprocessor.pkl
+│   │   └── model_trainer.py        # Trains, evaluates, saves model.pkl
+│   ├── exception.py            # Custom exception with file + line number tracking
+│   ├── logger.py               # Timestamped logging
+│   └── utils.py                # save_object / load_object using dill
+│
+├── predict_pipeline.py         # PredictPipeline + CustomData for inference
+├── app.py                      # Streamlit web application
+├── main.py                     # Runs full training pipeline
+├── requirements.txt
+└── README.md
 ```
 
 ---
 
-## 🔮 Future Enhancements
+## How to Run Locally
 
-- Error analysis by price segments  
-- Advanced hyperparameter tuning  
-- Feature importance visualization  
-- Model monitoring & drift detection  
-- Cloud deployment pipeline  
+### 1. Clone the Repository
+```bash
+git clone https://github.com/sumeet-016/car-price-prediction-ml.git
+cd car-price-prediction-ml
+```
+
+### 2. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Train the Pipeline
+```bash
+python main.py
+```
+This will generate `artifacts/preprocessor.pkl` and `artifacts/model.pkl`.
+
+### 4. Launch the App
+```bash
+streamlit run app.py
+```
+
+> **Note:** Always run from the project root directory. Use Anaconda Prompt for best compatibility.
+
+---
+
+## Future Enhancements
+
+- Feature importance visualization and SHAP explainability
+- Error analysis segmented by price range and manufacturer
+- Cloud deployment via AWS / GCP / Hugging Face Spaces
+- Model monitoring and data drift detection
+- CI/CD pipeline with automated retraining
 
 ---
 
-## 📌 Key Takeaways
+## Author
 
-- Built a fully modular ML pipeline  
-- Applied domain-driven feature engineering  
-- Leveraged ensemble learning for stability  
-- Designed a deployment-ready prediction system  
-- Followed industry-standard validation practices  
+**Sumeet Kumar Pal**
+Aspiring Data Scientist | Machine Learning Enthusiast
 
----
-
-## 👤 Author
-
-**Sumeet Kumar Pal**  
-Aspiring Data Analyst | Machine Learning Enthusiast  
-
-GitHub: https://github.com/sumeet-016  
-LinkedIn: https://www.linkedin.com/in/palsumeet  
-
----
+[![GitHub](https://img.shields.io/badge/GitHub-sumeet--016-black?logo=github)](https://github.com/sumeet-016)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-palsumeet-blue?logo=linkedin)](https://www.linkedin.com/in/palsumeet)

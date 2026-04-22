@@ -1,87 +1,84 @@
 import sys
-import os
 import pandas as pd
 from src.exception import CustomException
 from src.utils import load_object
 
 class PredictPipeline:
     def __init__(self):
-        pass
+        self.preprocessor = load_object("artifacts/preprocessor.pkl")  # feature_engine + encoder
+        self.model        = load_object("artifacts/model.pkl")
 
-    def predict(self, features):
+    def predict(self, input_df: pd.DataFrame) -> float:
         try:
-            model_path = os.path.join("artifacts", "model.pkl")
-            preprocessor_path = os.path.join("artifacts", "preprocessor.pkl")
-
-            model = load_object(file_path=model_path)
-            preprocessor = load_object(file_path=preprocessor_path)
-
-            data_transformed = preprocessor.transform(features)
-            
-            preds_proba = model.predict_proba(data_transformed)[:, 1]
-
-            # Applied tuned 0.35 threshold
-            predictions = (preds_proba >= 0.35).astype(int)
-
-            return predictions
+            X          = self.preprocessor.transform(input_df)  # feature_engine → encoder
+            prediction = self.model.predict(X)
+            return float(prediction[0])
 
         except Exception as e:
             raise CustomException(e, sys)
+
 
 class CustomData:
-    """
-    This class maps individual UI/Form inputs into a format 
-    that the model understands (a DataFrame).
-    """
-    def __init__(self, gender, SeniorCitizen, Partner, Dependents, tenure, PhoneService, 
-                 MultipleLines, InternetService, OnlineSecurity, OnlineBackup, 
-                 DeviceProtection, TechSupport, StreamingTV, StreamingMovies, 
-                 Contract, PaperlessBilling, PaymentMethod, MonthlyCharges, TotalCharges):
-        
-        self.gender = gender
-        self.SeniorCitizen = SeniorCitizen
-        self.Partner = Partner
-        self.Dependents = Dependents
-        self.tenure = tenure
-        self.PhoneService = PhoneService
-        self.MultipleLines = MultipleLines
-        self.InternetService = InternetService
-        self.OnlineSecurity = OnlineSecurity
-        self.OnlineBackup = OnlineBackup
-        self.DeviceProtection = DeviceProtection
-        self.TechSupport = TechSupport
-        self.StreamingTV = StreamingTV
-        self.StreamingMovies = StreamingMovies
-        self.Contract = Contract
-        self.PaperlessBilling = PaperlessBilling
-        self.PaymentMethod = PaymentMethod
-        self.MonthlyCharges = MonthlyCharges
-        self.TotalCharges = TotalCharges
+    """Collects raw user inputs from Streamlit and builds a DataFrame
+       with exactly the same columns FeatureEngine saw during training."""
 
-    def get_data_as_data_frame(self):
-        try:
-            custom_data_input_dict = {
-                "gender": [self.gender],
-                "SeniorCitizen": [self.SeniorCitizen],
-                "Partner": [self.Partner],
-                "Dependents": [self.Dependents],
-                "tenure": [self.tenure],
-                "PhoneService": [self.PhoneService],
-                "MultipleLines": [self.MultipleLines],
-                "InternetService": [self.InternetService],
-                "OnlineSecurity": [self.OnlineSecurity],
-                "OnlineBackup": [self.OnlineBackup],
-                "DeviceProtection": [self.DeviceProtection],
-                "TechSupport": [self.TechSupport],
-                "StreamingTV": [self.StreamingTV],
-                "StreamingMovies": [self.StreamingMovies],
-                "Contract": [self.Contract],
-                "PaperlessBilling": [self.PaperlessBilling],
-                "PaymentMethod": [self.PaymentMethod],
-                "MonthlyCharges": [self.MonthlyCharges],
-                "TotalCharges": [self.TotalCharges],
-            }
-            return pd.DataFrame(custom_data_input_dict)
+    def __init__(
+        self,
+        manufacturer     : str,
+        category         : str,
+        fuel_type        : str,
+        gear_box_type    : str,
+        color            : str,
+        leather_interior : str,
+        turbo            : str,
+        mileage          : int,
+        engine_volume    : float,
+        age              : int,
+        airbags          : int,
+        levy             : float,
+        is_premium_brand : bool,
+        inventory_segment: str,
+    ):
+        self.manufacturer      = manufacturer
+        self.category          = category
+        self.fuel_type         = fuel_type
+        self.gear_box_type     = gear_box_type
+        self.color             = color
+        self.leather_interior  = leather_interior
+        self.turbo             = turbo
+        self.mileage           = mileage
+        self.engine_volume     = engine_volume
+        self.age               = age
+        self.airbags           = airbags
+        self.levy              = levy
+        self.is_premium_brand  = is_premium_brand
+        self.inventory_segment = inventory_segment
 
-        except Exception as e:
-            raise CustomException(e, sys)
+    def get_data_as_dataframe(self) -> pd.DataFrame:
+        """Returns a single-row DataFrame matching training column structure."""
+        return pd.DataFrame({
+            # ── Raw columns FeatureEngine expects ──────────────────────
+            'Manufacturer'     : [self.manufacturer],
+            'Category'         : [self.category],
+            'Fuel type'        : [self.fuel_type],
+            'Gear box type'    : [self.gear_box_type],
+            'Color'            : [self.color],
+            'Leather interior' : [self.leather_interior],
+            'Turbo'            : [self.turbo],
+            'Mileage'          : [self.mileage],
+            'Engine_Volume_Num': [self.engine_volume],
+            'Engine volume'    : [self.engine_volume],
+            'Age'              : [self.age],
+            'Airbags'          : [self.airbags],
+            'Levy'             : [self.levy],
+            'Is_Premium_Brand' : [self.is_premium_brand],
+            'Inventory_Segment': [self.inventory_segment],
+            'Prod. year'       : [2025 - self.age],
+            'Cylinders'        : [4],
+            'Wheel'            : ['Left wheel'],
+            'Doors'            : ['4-May'],
+            'Model'            : ['Unknown'],
+            'Price_Per_Litre'  : [0],
+            'Age_Group'        : ['Unknown'],
+            'Mileage_Band'     : ['Unknown'],
+        })
